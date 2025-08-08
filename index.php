@@ -14,9 +14,10 @@ require_once 'database/database.php';
 // Obtener la ruta solicitada (endpoint)
 $request_uri = explode('/', trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'));
 
-// Quitar "api" si está en la ruta (ej: /api/estudiantes)
-if ($request_uri[0] === 'api') {
-    array_shift($request_uri);
+// Buscar la palabra "api" y tomar lo que está después
+$apiIndex = array_search('api', $request_uri);
+if ($apiIndex !== false) {
+    $request_uri = array_slice($request_uri, $apiIndex + 1);
 }
 
 // Método HTTP
@@ -25,7 +26,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 // Definir endpoints
 switch ($request_uri[0] ?? '') {
 
-    // Ejemplo: GET /api/estudiantes
     case 'estudiantes':
         if ($method === 'GET') {
             getEstudiantes();
@@ -36,7 +36,6 @@ switch ($request_uri[0] ?? '') {
         }
         break;
 
-    // Ejemplo: GET /api/profesores
     case 'profesores':
         if ($method === 'GET') {
             getProfesores();
@@ -45,7 +44,14 @@ switch ($request_uri[0] ?? '') {
         }
         break;
 
-    // Endpoint por defecto
+    case 'test':
+        if ($method === 'GET') {
+            sendResponse(200, ["message" => "API funcionando correctamente en local"]);
+        } else {
+            sendResponse(405, ["error" => "Método no permitido"]);
+        }
+        break;
+
     default:
         sendResponse(404, ["error" => "Endpoint no encontrado"]);
         break;
