@@ -79,7 +79,7 @@ switch ($request_uri[0] ?? '') {
 // --- Funciones ---
 function getUsers() {
     $conn = getConnection();
-    $stmt = $conn->query("SELECT * FROM users WHERE role = 'student'");
+    $stmt = $conn->query("SELECT * FROM users");
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
     sendResponse(200, $data);
 }
