@@ -29,7 +29,7 @@ switch ($request_uri[0] ?? '') {
                 getUsers();
             }
         } elseif ($method === 'POST') {
-           addUsuario();
+           addUser();
         } else {
             sendResponse(405, ["error" => "Método no permitido"]);
         }
@@ -54,6 +54,14 @@ switch ($request_uri[0] ?? '') {
         sendResponse(405, ["error" => "Método no permitido"]);
     }
     break;
+
+    case 'login':
+        if ($method === 'POST') {
+            loginUsuario();
+        } else {
+            sendResponse(405, ["error" => "Método no permitido"]);
+        }
+        break;
 
     case 'test':
         if ($method === 'GET') {
@@ -90,7 +98,7 @@ function getUserById($id) {
     }
 }
 
-function addUsuario() {
+function addUser() {
     $data = json_decode(file_get_contents("php://input"));
 
     // Validación de datos obligatorios
@@ -117,12 +125,6 @@ function addUsuario() {
 }
 
 
-function getProfesores() {
-    $conn = getConnection();
-    $stmt = $conn->query("SELECT id, nombre, correo FROM profesores");
-    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    sendResponse(200, $data);
-}
 
 function sendResponse($status, $data) {
     http_response_code($status);
@@ -197,4 +199,32 @@ function deleteTask($id) {
         sendResponse(500, ["error" => "Error al eliminar tarea", "detalle" => $e->getMessage()]);
     }
 }
+
+function loginUsuario() {
+    $data = json_decode(file_get_contents("php://input"));
+
+    if (!isset($data->email) || !isset($data->password)) {
+        sendResponse(400, ["error" => "Faltan datos obligatorios"]);
+    }
+
+    $conn = getConnection();
+    $stmt = $conn->prepare("SELECT id, nombre, email, role, created_at 
+                            FROM users 
+                            WHERE email = :email AND password_hash = SHA2(:password, 256)");
+    $stmt->bindParam(":email", $data->email);
+    $stmt->bindParam(":password", $data->password);
+
+    $stmt->execute();
+    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($usuario) {
+        sendResponse(200, [
+            "message" => "Login exitoso",
+            "usuario" => $usuario
+        ]);
+    } else {
+        sendResponse(401, ["error" => "Credenciales inválidas"]);
+    }
+}
+
 
