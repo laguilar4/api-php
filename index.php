@@ -4,33 +4,32 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-// Si la petición es OPTIONS, termina aquí (CORS preflight)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
 require_once 'database/database.php';
 
-// Obtener la ruta solicitada (endpoint)
 $request_uri = explode('/', trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'));
 
-// Buscar la palabra "api" y tomar lo que está después
 $apiIndex = array_search('api', $request_uri);
 if ($apiIndex !== false) {
     $request_uri = array_slice($request_uri, $apiIndex + 1);
 }
 
-// Método HTTP
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Definir endpoints
 switch ($request_uri[0] ?? '') {
 
-    case 'estudiantes':
+    case 'users':
         if ($method === 'GET') {
-            getEstudiantes();
+            if (isset($request_uri[1]) && is_numeric($request_uri[1])) {
+                getUserById($request_uri[1]);
+            } else {
+                getUsers();
+            }
         } elseif ($method === 'POST') {
-            addEstudiante();
+           addUsuario();
         } else {
             sendResponse(405, ["error" => "Método no permitido"]);
         }
@@ -58,25 +57,53 @@ switch ($request_uri[0] ?? '') {
 }
 
 // --- Funciones ---
-function getEstudiantes() {
+function getUsers() {
     $conn = getConnection();
-    $stmt = $conn->query("SELECT id, nombre, correo FROM estudiantes");
+    $stmt = $conn->query("SELECT * FROM users WHERE role = 'student'");
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
     sendResponse(200, $data);
 }
 
-function addEstudiante() {
-    $data = json_decode(file_get_contents("php://input"));
-    if (!isset($data->nombre) || !isset($data->correo)) {
-        sendResponse(400, ["error" => "Faltan datos"]);
-    }
+function getUserById($id) {
     $conn = getConnection();
-    $stmt = $conn->prepare("INSERT INTO estudiantes (nombre, correo) VALUES (:nombre, :correo)");
-    $stmt->bindParam(":nombre", $data->nombre);
-    $stmt->bindParam(":correo", $data->correo);
+    $stmt = $conn->prepare("SELECT * FROM users WHERE role = 'student' AND id = :id");
+    $stmt->bindParam(":id", $id, PDO::PARAM_INT);
     $stmt->execute();
-    sendResponse(201, ["message" => "Estudiante agregado"]);
+    $estudiante = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($estudiante) {
+        sendResponse(200, $estudiante);
+    } else {
+        sendResponse(404, ["error" => "Estudiante no encontrado"]);
+    }
 }
+
+function addUsuario() {
+    $data = json_decode(file_get_contents("php://input"));
+
+    // Validación de datos obligatorios
+    if (!isset($data->nombre) || !isset($data->email) || !isset($data->password) || !isset($data->role)) {
+        sendResponse(400, ["error" => "Faltan datos obligatorios"]);
+    }
+
+    $conn = getConnection();
+
+    // Usando SHA2 para el hash en MySQL
+    $stmt = $conn->prepare("INSERT INTO dtic_uninorte.users (nombre, email, password_hash, role)
+                            VALUES (:nombre, :email, SHA2(:password, 256), :role)");
+    $stmt->bindParam(":nombre", $data->nombre);
+    $stmt->bindParam(":email", $data->email);
+    $stmt->bindParam(":password", $data->password);
+    $stmt->bindParam(":role", $data->role);
+
+    try {
+        $stmt->execute();
+        sendResponse(201, ["message" => "Usuario creado correctamente"]);
+    } catch (PDOException $e) {
+        sendResponse(500, ["error" => "Error al crear usuario", "detalle" => $e->getMessage()]);
+    }
+}
+
 
 function getProfesores() {
     $conn = getConnection();
