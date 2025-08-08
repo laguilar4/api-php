@@ -35,13 +35,25 @@ switch ($request_uri[0] ?? '') {
         }
         break;
 
-    case 'profesores':
-        if ($method === 'GET') {
-            getProfesores();
+    case 'tasks':
+    if ($method === 'POST') {
+        addTask();
+    } elseif ($method === 'PUT') {
+        if (isset($request_uri[1]) && is_numeric($request_uri[1])) {
+            updateTask($request_uri[1]);
         } else {
-            sendResponse(405, ["error" => "Método no permitido"]);
+            sendResponse(400, ["error" => "ID de tarea no válido"]);
         }
-        break;
+    } elseif ($method === 'DELETE') {
+        if (isset($request_uri[1]) && is_numeric($request_uri[1])) {
+            deleteTask($request_uri[1]);
+        } else {
+            sendResponse(400, ["error" => "ID de tarea no válido"]);
+        }
+    } else {
+        sendResponse(405, ["error" => "Método no permitido"]);
+    }
+    break;
 
     case 'test':
         if ($method === 'GET') {
@@ -117,3 +129,72 @@ function sendResponse($status, $data) {
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+function addTask() {
+    $data = json_decode(file_get_contents("php://input"));
+
+    if (!isset($data->user_id) || !isset($data->title)) {
+        sendResponse(400, ["error" => "Faltan datos obligatorios"]);
+    }
+
+    $conn = getConnection();
+    $stmt = $conn->prepare("INSERT INTO tasks (user_id, title, description, status, due_date)
+                            VALUES (:user_id, :title, :description, :status, :due_date)");
+
+    $stmt->bindParam(":user_id", $data->user_id, PDO::PARAM_INT);
+    $stmt->bindParam(":title", $data->title);
+    $stmt->bindParam(":description", $data->description);
+    $stmt->bindParam(":status", $data->status);
+    $stmt->bindParam(":due_date", $data->due_date);
+
+    try {
+        $stmt->execute();
+        sendResponse(201, ["message" => "Tarea creada correctamente"]);
+    } catch (PDOException $e) {
+        sendResponse(500, ["error" => "Error al crear tarea", "detalle" => $e->getMessage()]);
+    }
+}
+
+function updateTask($id) {
+    $data = json_decode(file_get_contents("php://input"));
+
+    $conn = getConnection();
+    $stmt = $conn->prepare("UPDATE tasks 
+                            SET title = :title, description = :description, status = :status, due_date = :due_date
+                            WHERE id = :id");
+
+    $stmt->bindParam(":title", $data->title);
+    $stmt->bindParam(":description", $data->description);
+    $stmt->bindParam(":status", $data->status);
+    $stmt->bindParam(":due_date", $data->due_date);
+    $stmt->bindParam(":id", $id, PDO::PARAM_INT);
+
+    try {
+        $stmt->execute();
+        if ($stmt->rowCount() > 0) {
+            sendResponse(200, ["message" => "Tarea actualizada correctamente"]);
+        } else {
+            sendResponse(404, ["error" => "Tarea no encontrada"]);
+        }
+    } catch (PDOException $e) {
+        sendResponse(500, ["error" => "Error al actualizar tarea", "detalle" => $e->getMessage()]);
+    }
+}
+
+function deleteTask($id) {
+    $conn = getConnection();
+    $stmt = $conn->prepare("DELETE FROM tasks WHERE id = :id");
+    $stmt->bindParam(":id", $id, PDO::PARAM_INT);
+
+    try {
+        $stmt->execute();
+        if ($stmt->rowCount() > 0) {
+            sendResponse(200, ["message" => "Tarea eliminada correctamente"]);
+        } else {
+            sendResponse(404, ["error" => "Tarea no encontrada"]);
+        }
+    } catch (PDOException $e) {
+        sendResponse(500, ["error" => "Error al eliminar tarea", "detalle" => $e->getMessage()]);
+    }
+}
+
