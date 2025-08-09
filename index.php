@@ -44,6 +44,13 @@ switch ($request_uri[0] ?? '') {
         } else {
             sendResponse(400, ["error" => "ID de tarea no válido"]);
         }
+    }
+    elseif ($method === 'GET') {
+        if (isset($request_uri[1]) && is_numeric($request_uri[1])) {
+            getTaksUser($request_uri[1]);
+        } else {
+            sendResponse(400, ["error" => "ID de tarea no válido"]);
+        }
     } elseif ($method === 'DELETE') {
         if (isset($request_uri[1]) && is_numeric($request_uri[1])) {
             deleteTask($request_uri[1]);
@@ -154,6 +161,23 @@ function addTask() {
         sendResponse(201, ["message" => "Tarea creada correctamente"]);
     } catch (PDOException $e) {
         sendResponse(500, ["error" => "Error al crear tarea", "detalle" => $e->getMessage()]);
+    }
+}
+
+function getTaksUser($id) {
+    $conn = getConnection();
+    $stmt = $conn->prepare("SELECT * FROM taks t 
+    LEFT JOIN users u
+    ON t.user_id = u.id
+    WHERE t.user_id = :id");
+    $stmt->bindParam(":id", $id, PDO::PARAM_INT);
+    $stmt->execute();
+    $estudiante = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($estudiante) {
+        sendResponse(200, $estudiante);
+    } else {
+        sendResponse(404, ["error" => "Tareas no encontradas"]);
     }
 }
 
