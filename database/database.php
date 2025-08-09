@@ -1,9 +1,9 @@
 <?php
 function getConnection() {
-    $host = "localhost";
+    $host = "54.147.36.38";//"localhost";
     $dbname = "dtic_uninorte";
     $user = "root";
-    $pass = "";
+    $pass = "PasSWoRD-PrueBaTECnica";
 
     try {
         $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
