@@ -1,12 +1,22 @@
+# Activar reescritura de URLs
 RewriteEngine On
-RewriteBase /api-php/
 
-# Evitar bucle: si la petición es a index.php, no reescribir
+# Detectar automáticamente la base
+RewriteBase /
+
+# Evitar reescribir si la petición es directamente al archivo index.php
 RewriteCond %{REQUEST_URI} !index\.php$
 
-# Si el archivo o carpeta existe, no reescribir
+# Si el archivo o carpeta existe físicamente, no reescribir
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Redirigir todo a index.php
+# Redirigir todo hacia index.php, manteniendo parámetros
 RewriteRule ^ index.php [QSA,L]
+
+# Configuración extra para CORS y APIs (opcional pero recomendado)
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>
