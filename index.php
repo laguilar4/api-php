@@ -172,10 +172,10 @@ function getTaksUser($id) {
     WHERE t.user_id = :id");
     $stmt->bindParam(":id", $id, PDO::PARAM_INT);
     $stmt->execute();
-    $estudiante = $stmt->fetch(PDO::FETCH_ASSOC);
+    $tareas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if ($estudiante) {
-        sendResponse(200, $estudiante);
+    if ($tareas) {
+        sendResponse(200, $tareas);
     } else {
         sendResponse(404, ["error" => "Tareas no encontradas"]);
     }
