@@ -166,7 +166,7 @@ function addTask() {
 
 function getTaksUser($id) {
     $conn = getConnection();
-    $stmt = $conn->prepare("SELECT * FROM taks t 
+    $stmt = $conn->prepare("SELECT * FROM tasks t 
     LEFT JOIN users u
     ON t.user_id = u.id
     WHERE t.user_id = :id");
