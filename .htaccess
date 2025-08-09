@@ -1,9 +1,12 @@
 RewriteEngine On
 RewriteBase /api-php/
 
-# Si el archivo o carpeta existe, usa eso
+# Evitar bucle: si la petición es a index.php, no reescribir
+RewriteCond %{REQUEST_URI} !index\.php$
+
+# Si el archivo o carpeta existe, no reescribir
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Si no existe, envía todo a index.php
+# Redirigir todo a index.php
 RewriteRule ^ index.php [QSA,L]
