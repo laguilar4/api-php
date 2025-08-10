@@ -1,37 +1,35 @@
-# Imagen base con PHP y Apache
-FROM php:8.1-apache
+FROM php:8.2-apache
 
-# Habilitar extensiones necesarias para PHP
-RUN docker-php-ext-install pdo pdo_mysql
-
-# Instalar dependencias necesarias para Composer
+# Instalar dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y \
-    unzip \
-    git \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    git unzip libzip-dev \
+    && docker-php-ext-install zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Instalar Composer globalmente
-RUN curl -sS https://getcomposer.org/installer | php -- \
-    --install-dir=/usr/local/bin --filename=composer
+# Habilitar mod_rewrite en Apache
+RUN a2enmod rewrite
 
-# Establecer directorio de trabajo
+# Configurar Apache para permitir .htaccess
+RUN echo '<Directory /var/www/html>' \
+         '\n    AllowOverride All' \
+         '\n</Directory>' \
+         >> /etc/apache2/apache2.conf
+
+# Copiar composer desde imagen oficial
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Copiar el proyecto al contenedor
+COPY . /var/www/html
+
+# Instalar dependencias PHP (ejecuta composer install dentro del contenedor)
 WORKDIR /var/www/html
+RUN composer install --no-interaction --no-dev --optimize-autoloader
 
-# Copiar composer.json y composer.lock primero (mejor cache de capas)
-COPY composer.json composer.lock* ./
-
-# Instalar dependencias PHP sin interacción
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
-
-# Copiar el resto del código fuente al contenedor
-COPY . .
-
-# Dar permisos a Apache
+# Cambiar permisos
 RUN chown -R www-data:www-data /var/www/html
 
-# Exponer el puerto 80
+# Exponer puerto 80
 EXPOSE 80
 
-# Iniciar Apache
+# Comando por defecto
 CMD ["apache2-foreground"]
