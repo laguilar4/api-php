@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 # Habilitar mod_rewrite
+
 RUN a2enmod rewrite
 
 # Configurar Apache para permitir .htaccess
