@@ -9,8 +9,7 @@ FROM php:8.2-apache
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 
 # --------------------------
-# Instalar herramientas adicionales
-# - curl, unzip, git son necesarios para Composer y otras tareas
+# Instalar herramientas adicionales (curl, unzip, git)
 # --------------------------
 RUN apt-get update && apt-get install -y \
     curl \
@@ -21,7 +20,8 @@ RUN apt-get update && apt-get install -y \
 # --------------------------
 # Instalar Composer globalmente
 # --------------------------
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN curl -sS https://getcomposer.org/installer | php -- \
+    --install-dir=/usr/local/bin --filename=composer
 
 # --------------------------
 # Habilitar módulos de Apache necesarios
@@ -29,54 +29,52 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 RUN a2enmod rewrite headers
 
 # --------------------------
-# Configurar ServerName para evitar advertencias
+# Configurar Apache
 # --------------------------
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf \
+    && sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
 
 # --------------------------
-# Permitir uso de .htaccess
+# Configuración CORS
 # --------------------------
-RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
+RUN echo '<IfModule mod_headers.c>\n\
+    Header always set Access-Control-Allow-Origin "*"\n\
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"\n\
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"\n\
+</IfModule>' > /etc/apache2/conf-enabled/cors.conf
 
 # --------------------------
-# Configuración CORS para permitir peticiones desde cualquier origen
-# --------------------------
-RUN echo '<IfModule mod_headers.c>' > /etc/apache2/conf-enabled/cors.conf && \
-    echo '    Header always set Access-Control-Allow-Origin "*"' >> /etc/apache2/conf-enabled/cors.conf && \
-    echo '    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"' >> /etc/apache2/conf-enabled/cors.conf && \
-    echo '    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"' >> /etc/apache2/conf-enabled/cors.conf && \
-    echo '</IfModule>' >> /etc/apache2/conf-enabled/cors.conf
-
-# --------------------------
-# Copiar composer.json y composer.lock primero
-# Esto permite usar la caché de Docker si composer.json no cambia
-# --------------------------
-COPY composer.json composer.lock /var/www/html/
-
-# --------------------------
-# Instalar dependencias PHP con Composer
-# Esto crea la carpeta vendor/ y el autoload.php
+# Establecer el directorio de trabajo
 # --------------------------
 WORKDIR /var/www/html
-RUN composer install --no-dev --optimize-autoloader
 
 # --------------------------
-# Copiar el resto del proyecto después de instalar dependencias
-# Así no se reinstalan paquetes en cada build si no cambian
+# Copiar composer.json y composer.lock primero para cache de dependencias
 # --------------------------
-COPY . /var/www/html/
+COPY composer.json composer.lock ./
 
 # --------------------------
-# Dar permisos a Apache para manejar los archivos
+# Instalar dependencias con Composer
 # --------------------------
-RUN chown -R www-data:www-data /var/www/html
+RUN composer install --no-dev --optimize-autoloader --prefer-dist
 
 # --------------------------
-# Exponer puerto 80 para el contenedor
+# Copiar el resto del proyecto
+# --------------------------
+COPY . .
+
+# --------------------------
+# Permisos para Apache
+# --------------------------
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
+
+# --------------------------
+# Exponer puerto
 # --------------------------
 EXPOSE 80
 
 # --------------------------
-# Iniciar Apache en primer plano
+# Comando por defecto
 # --------------------------
 CMD ["apache2-foreground"]
