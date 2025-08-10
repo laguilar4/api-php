@@ -1,9 +1,10 @@
 FROM php:8.2-apache
 
-# Instalar dependencias necesarias para Composer
+# Instalar dependencias necesarias para Composer y MySQL
 RUN apt-get update && apt-get install -y \
-    git unzip libzip-dev zip && \
-    docker-php-ext-install zip
+    git unzip libzip-dev zip libpng-dev libonig-dev libxml2-dev mariadb-client && \
+    docker-php-ext-install zip pdo pdo_mysql && \
+    rm -rf /var/lib/apt/lists/*
 
 # Habilitar mod_rewrite
 RUN a2enmod rewrite
@@ -24,10 +25,10 @@ COPY . /var/www/html
 # Dar permisos correctos
 RUN chown -R www-data:www-data /var/www/html
 
-# Instalar Composer
+# Copiar Composer desde imagen oficial
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Instalar dependencias PHP
+# Instalar dependencias PHP desde composer.json
 WORKDIR /var/www/html
 RUN composer install --no-interaction --optimize-autoloader
 
