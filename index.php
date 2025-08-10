@@ -23,13 +23,23 @@ function validarToken() {
     global $claveSecreta;
 
     // Obtener headers HTTP
-    $headers = getallheaders();
-    if (!isset($headers['Authorization'])) {
+    // Normalizar todos los headers a minúsculas para evitar problemas de casing
+    $headers = array_change_key_case(getallheaders(), CASE_LOWER);
+
+    if (!isset($headers['authorization'])) {
         sendResponse(401, ["error" => "Token de autorización requerido"]);
     }
 
-    // Extraer token (se espera formato: "Bearer <token>")
-    $token = str_replace('Bearer ', '', $headers['Authorization']);
+    $authHeader = $headers['authorization'];
+
+    // Verificar que el header tenga el formato correcto "Bearer <token>"
+    if (stripos($authHeader, 'Bearer ') !== 0) {
+        sendResponse(401, ["error" => "Formato de token inválido"]);
+    }
+
+    // Extraer token removiendo "Bearer "
+    $token = substr($authHeader, 7);
+
 
     try {
         // Decodificar token, validar firma y expiración
