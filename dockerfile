@@ -1,35 +1,38 @@
 FROM php:8.2-apache
 
-# Instalar dependencias del sistema necesarias
+# Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
-    git unzip libzip-dev \
-    && docker-php-ext-install zip \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    git \
+    unzip \
+    zip \
+    libzip-dev \
+    && docker-php-ext-install zip
 
-# Habilitar mod_rewrite en Apache
+# Habilitar mod_rewrite de Apache
 RUN a2enmod rewrite
 
 # Configurar Apache para permitir .htaccess
-RUN echo '<Directory /var/www/html>' \
-         '\n    AllowOverride All' \
-         '\n</Directory>' \
-         >> /etc/apache2/apache2.conf
+RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
 
-# Copiar composer desde imagen oficial
+# Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copiar el proyecto al contenedor
-COPY . /var/www/html
-
-# Instalar dependencias PHP (ejecuta composer install dentro del contenedor)
+# Establecer directorio de trabajo
 WORKDIR /var/www/html
-RUN composer install --no-interaction --no-dev --optimize-autoloader
 
-# Cambiar permisos
+# Copiar composer.json y composer.lock primero (para aprovechar la cache)
+COPY composer.json composer.lock* ./
+
+# Instalar dependencias de PHP
+RUN composer install --no-dev --optimize-autoloader
+
+# Copiar el resto de archivos del proyecto
+COPY . .
+
+# Dar permisos
 RUN chown -R www-data:www-data /var/www/html
 
-# Exponer puerto 80
+# Exponer puerto
 EXPOSE 80
 
-# Comando por defecto
 CMD ["apache2-foreground"]
