@@ -30,8 +30,8 @@ COPY . .
 # Dar permisos a Apache
 RUN chown -R www-data:www-data /var/www/html
 
-# Exponer el puerto 8080
-EXPOSE 8080
+# Exponer el puerto 80
+EXPOSE 80
 
 # Iniciar Apache
 CMD ["apache2-foreground"]
