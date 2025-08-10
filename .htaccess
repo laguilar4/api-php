@@ -1,6 +1,11 @@
 # Activar reescritura de URLs
 RewriteEngine On
 
+#Header
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule ^(.*) - [E=HTTP_AUTHORIZATION:%1]
+
+
 # Detectar automáticamente la base
 RewriteBase /
 
